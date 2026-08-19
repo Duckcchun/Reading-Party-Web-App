@@ -13,13 +13,32 @@ function parseHash(): Route {
 }
 
 function Nav({ route }: { route: Route }) {
+  const [hidden, setHidden] = useState(false)
+
+  useEffect(() => {
+    // 모바일에서 input/textarea 포커스 시 Nav 숨기기
+    const onFocus = (e: FocusEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === "INPUT" || tag === "TEXTAREA") setHidden(true)
+    }
+    const onBlur = () => setHidden(false)
+    document.addEventListener("focusin", onFocus)
+    document.addEventListener("focusout", onBlur)
+    return () => {
+      document.removeEventListener("focusin", onFocus)
+      document.removeEventListener("focusout", onBlur)
+    }
+  }, [])
+
+  if (hidden) return null
+
   const items: { key: Route; label: string }[] = [
     { key: "participant", label: "참가자" },
     { key: "display", label: "디스플레이" },
     { key: "admin", label: "진행자" },
   ]
   return (
-    <nav className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 gap-1 rounded-full border border-white/10 bg-panel/80 p-1 backdrop-blur-md">
+    <nav className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-50 flex -translate-x-1/2 gap-1 rounded-full border border-white/10 bg-panel/80 p-1 backdrop-blur-md">
       {items.map((it) => (
         <a
           key={it.key}

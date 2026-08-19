@@ -87,7 +87,7 @@ export default function ParticipantPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-md flex-col px-6 pb-16 pt-12">
+    <div className="mx-auto flex min-h-full w-full max-w-md flex-col px-6 pb-[max(4rem,calc(1rem+env(safe-area-inset-bottom)))] pt-[max(3rem,calc(1rem+env(safe-area-inset-top)))]">
       <header className="mb-8">
         <p className="text-[13px] font-medium uppercase tracking-[0.22em] text-amber/90">
           한강 리딩 파티
@@ -138,6 +138,12 @@ export default function ParticipantPage() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
+              {!query.trim() && !searching && results.length === 0 && (
+                <p className="mt-2.5 px-1 text-[13px] leading-relaxed text-lavender/50">
+                  오늘 읽은 책과 어울리는 곡, 지금 기분을 담은 노래,
+                  혹은 이 강변에 흘렀으면 하는 한 곡을 찾아보세요.
+                </p>
+              )}
               <div className="mt-2 overflow-hidden rounded-[10px] border border-white/8 bg-panel/60 empty:hidden">
                 {searching && (
                   <p className="px-4 py-3 text-sm text-lavender/70">찾고 있어요…</p>

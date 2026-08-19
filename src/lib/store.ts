@@ -162,6 +162,15 @@ export async function markPlayed(id: string) {
   await notifyAndRefresh()
 }
 
+export async function deleteSong(id: string) {
+  await fetch(`${API}/delete-song`, {
+    method: "POST",
+    headers: HEADERS,
+    body: JSON.stringify({ id }),
+  })
+  await notifyAndRefresh()
+}
+
 export function nowPlaying(songs: Song[]) {
   return songs.find((s) => s.status === "playing") ?? null
 }

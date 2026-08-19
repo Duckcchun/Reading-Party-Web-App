@@ -244,4 +244,37 @@ app.post(`${BASE}/played`, async (c) => {
   }
 });
 
+// ─── DELETE /song — 진행자가 곡 삭제 ────────────────────────────────────────────
+app.post(`${BASE}/delete-song`, async (c) => {
+  const body = await c.req.json();
+  const { id } = body;
+
+  if (!id) return c.json({ error: "missing id" }, 400);
+
+  try {
+    const songs: any[] = (await kv.get("songs")) ?? [];
+    const filtered = songs.filter((s: any) => s.id !== id);
+
+    // 삭제된 곡이 playing이었으면 다음 곡 승격
+    const deleted = songs.find((s: any) => s.id === id);
+    if (deleted?.status === "playing") {
+      const nextQueued = filtered
+        .filter((s: any) => s.status === "queued")
+        .sort((a: any, b: any) => a.createdAt - b.createdAt);
+      if (nextQueued.length > 0) {
+        const nextIdx = filtered.findIndex((s: any) => s.id === nextQueued[0].id);
+        if (nextIdx !== -1) {
+          filtered[nextIdx].status = "playing";
+        }
+      }
+    }
+
+    await kv.set("songs", filtered);
+    return c.json({ ok: true });
+  } catch (e) {
+    console.error("delete-song error:", e);
+    return c.json({ error: "server" }, 500);
+  }
+});
+
 Deno.serve(app.fetch);

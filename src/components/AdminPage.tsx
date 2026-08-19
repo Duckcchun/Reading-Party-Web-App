@@ -1,4 +1,4 @@
-import { markPlayed, nowPlaying, upNext, useStore } from "../lib/store"
+import { deleteSong, markPlayed, nowPlaying, upNext, useStore } from "../lib/store"
 
 export default function AdminPage() {
   const { songs, sentences } = useStore()
@@ -28,12 +28,20 @@ export default function AdminPage() {
                 {current.artist && <p className="mt-1 truncate text-lavender">{current.artist}</p>}
               </div>
             </div>
-            <button
-              onClick={() => markPlayed(current.id)}
-              className="shrink-0 rounded-[10px] bg-amber px-4 py-2.5 font-medium text-ink transition-transform duration-150 active:scale-[0.985]"
-            >
-              재생완료
-            </button>
+            <div className="flex shrink-0 gap-2">
+              <button
+                onClick={() => deleteSong(current.id)}
+                className="rounded-[10px] border border-white/10 px-3 py-2.5 text-sm text-lavender transition-colors hover:border-red-400/40 hover:text-red-300"
+              >
+                삭제
+              </button>
+              <button
+                onClick={() => markPlayed(current.id)}
+                className="rounded-[10px] bg-amber px-4 py-2.5 font-medium text-ink transition-transform duration-150 active:scale-[0.985]"
+              >
+                재생완료
+              </button>
+            </div>
           </div>
         ) : (
           <p className="mt-3 text-lavender">재생 중인 곡이 없어요.</p>
@@ -59,6 +67,12 @@ export default function AdminPage() {
                   {s.artist && <span className="text-lavender"> · {s.artist}</span>}
                 </span>
               </span>
+              <button
+                onClick={() => deleteSong(s.id)}
+                className="shrink-0 rounded-md px-2.5 py-1 text-xs text-lavender/60 transition-colors hover:text-red-300"
+              >
+                삭제
+              </button>
             </li>
           ))}
           {!queue.length && (

@@ -46,6 +46,18 @@ body {
   color: #f5f1e8;
 }
 
+/* 접근성: 키보드 포커스 링 */
+:focus-visible {
+  outline: 2px solid rgba(242, 166, 90, 0.6);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+input:focus-visible,
+textarea:focus-visible {
+  outline: none; /* input/textarea는 자체 border 스타일로 처리 */
+}
+
 /* Signature entrance for display-page sentences */
 @keyframes sentence-rise {
   from {
