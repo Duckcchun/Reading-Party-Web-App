@@ -16,9 +16,8 @@
 ### Vercel (프론트엔드)
 
 1. GitHub 연결 후 프로젝트 import
-2. **Root Directory**: `app` 으로 설정
-3. Framework Preset: Vite (자동 감지됨)
-4. Deploy
+2. Framework Preset: Vite (자동 감지됨)
+3. Deploy
 
 ### Supabase (백엔드)
 
@@ -39,7 +38,6 @@ Spotify Developer Dashboard에서 Redirect URI에 배포된 주소 등록:
 ## 로컬 개발
 
 ```bash
-cd app
 pnpm install
 pnpm dev
 ```
