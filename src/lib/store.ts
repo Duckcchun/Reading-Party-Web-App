@@ -104,14 +104,15 @@ async function notifyAndRefresh() {
   await refresh()
 }
 
-export async function searchTracks(q: string): Promise<Track[]> {
+export async function searchTracks(q: string, signal?: AbortSignal): Promise<Track[]> {
   if (!q.trim()) return []
   try {
-    const res = await fetch(`${API}/search?q=${encodeURIComponent(q)}`, { headers: HEADERS })
+    const res = await fetch(`${API}/search?q=${encodeURIComponent(q)}`, { headers: HEADERS, signal })
     if (!res.ok) return []
     const data = await res.json()
     return (data.tracks ?? []) as Track[]
-  } catch {
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") return []
     return []
   }
 }
@@ -127,7 +128,7 @@ export async function getSpotifyClientId(): Promise<string> {
   }
 }
 
-export type SubmitResult = "ok" | "empty" | "profanity" | "error"
+export type SubmitResult = "ok" | "empty" | "profanity" | "duplicate" | "error"
 
 // 선택한 곡과 문장을 한 번에 제출합니다. 둘 다 선택이지만 최소 하나는 있어야 해요.
 export async function submitEntry(
@@ -143,6 +144,7 @@ export async function submitEntry(
     })
     if (res.status === 422) return "profanity"
     if (res.status === 400) return "empty"
+    if (res.status === 409) return "duplicate"
     if (!res.ok) return "error"
     await notifyAndRefresh()
     return "ok"

@@ -76,8 +76,10 @@ app.get(`${BASE}/config`, (c) => {
 // ─── GET /state — 현재 곡 목록 + 문장 목록 ─────────────────────────────────────
 app.get(`${BASE}/state`, async (c) => {
   try {
-    const songs = (await kv.get("songs")) ?? [];
+    const allSongs: any[] = (await kv.get("songs")) ?? [];
     const sentences = (await kv.get("sentences")) ?? [];
+    // done 상태인 곡은 클라이언트에 보내지 않음 (payload 경량화)
+    const songs = allSongs.filter((s: any) => s.status !== "done");
     return c.json({ songs, sentences });
   } catch (e) {
     console.error("state error:", e);
@@ -144,6 +146,16 @@ app.post(`${BASE}/submit`, async (c) => {
     const songs: any[] = (await kv.get("songs")) ?? [];
     const sentences: any[] = (await kv.get("sentences")) ?? [];
 
+    // 중복 곡 제출 방지: 같은 uri가 5분 이내에 이미 신청된 경우 거부
+    if (track) {
+      const recentDuplicate = songs.find(
+        (s: any) => s.uri === track.uri && s.status !== "done" && now - s.createdAt < 5 * 60 * 1000
+      );
+      if (recentDuplicate) {
+        return c.json({ error: "duplicate", message: "이미 신청된 곡이에요" }, 409);
+      }
+    }
+
     // 곡 추가
     if (track) {
       const hasPlaying = songs.some((s: any) => s.status === "playing");
@@ -172,8 +184,20 @@ app.post(`${BASE}/submit`, async (c) => {
       sentences.push(sentence);
     }
 
-    await kv.set("songs", songs);
-    await kv.set("sentences", sentences);
+    // 오래된 done 곡 정리 (1시간 이상 지난 것)
+    const ONE_HOUR = 60 * 60 * 1000;
+    const cleanedSongs = songs.filter(
+      (s: any) => s.status !== "done" || now - s.createdAt < ONE_HOUR
+    );
+
+    // 오래된 문장 정리 (2시간 이상 지난 것)
+    const TWO_HOURS = 2 * 60 * 60 * 1000;
+    const cleanedSentences = sentences.filter(
+      (s: any) => now - s.createdAt < TWO_HOURS
+    );
+
+    await kv.set("songs", cleanedSongs);
+    await kv.set("sentences", cleanedSentences);
 
     return c.json({ ok: true });
   } catch (e) {

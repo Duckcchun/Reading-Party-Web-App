@@ -23,6 +23,7 @@ export default function ParticipantPage() {
   const [sending, setSending] = useState(false)
 
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     if (selected) return
@@ -35,9 +36,15 @@ export default function ParticipantPage() {
     }
     setSearching(true)
     debounce.current = setTimeout(async () => {
-      const r = await searchTracks(q)
-      setResults(r)
-      setSearching(false)
+      // 이전 요청 취소
+      abortRef.current?.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
+      const r = await searchTracks(q, controller.signal)
+      if (!controller.signal.aborted) {
+        setResults(r)
+        setSearching(false)
+      }
     }, 350)
     return () => {
       if (debounce.current) clearTimeout(debounce.current)
@@ -61,6 +68,10 @@ export default function ParticipantPage() {
       setError("조금만 더 부드러운 표현으로 남겨주실 수 있을까요.")
       return
     }
+    if (result === "duplicate") {
+      setError("이미 신청된 곡이에요. 다른 곡을 골라볼까요?")
+      return
+    }
     if (result !== "ok") {
       setError("전송이 잠시 막혔어요. 다시 한 번 눌러주실래요.")
       return
@@ -72,7 +83,7 @@ export default function ParticipantPage() {
     setError("")
     // 닉네임은 다음 신청에도 이어 쓸 수 있게 지우지 않습니다.
     setDone(true)
-    setTimeout(() => setDone(false), 3600)
+    setTimeout(() => setDone(false), 3000)
   }
 
   return (

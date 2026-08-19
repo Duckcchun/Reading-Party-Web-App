@@ -51,7 +51,7 @@ export default function App() {
       {route === "participant" && <ParticipantPage />}
       {route === "display" && <DisplayPage />}
       {route === "admin" && <AdminPage />}
-      <Nav route={route} />
+      {route !== "display" && <Nav route={route} />}
     </div>
   )
 }
