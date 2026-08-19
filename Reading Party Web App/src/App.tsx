@@ -1,0 +1,57 @@
+import { useEffect, useState } from "react"
+import ParticipantPage from "./components/ParticipantPage"
+import DisplayPage from "./components/DisplayPage"
+import AdminPage from "./components/AdminPage"
+
+type Route = "participant" | "display" | "admin"
+
+function parseHash(): Route {
+  const h = window.location.hash.replace("#/", "").replace("#", "")
+  if (h === "display") return "display"
+  if (h === "admin") return "admin"
+  return "participant"
+}
+
+function Nav({ route }: { route: Route }) {
+  const items: { key: Route; label: string }[] = [
+    { key: "participant", label: "참가자" },
+    { key: "display", label: "디스플레이" },
+    { key: "admin", label: "진행자" },
+  ]
+  return (
+    <nav className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 gap-1 rounded-full border border-white/10 bg-panel/80 p-1 backdrop-blur-md">
+      {items.map((it) => (
+        <a
+          key={it.key}
+          href={`#/${it.key}`}
+          className={`rounded-full px-4 py-1.5 text-sm transition-colors ${
+            route === it.key
+              ? "bg-amber text-ink"
+              : "text-lavender hover:text-ivory"
+          }`}
+        >
+          {it.label}
+        </a>
+      ))}
+    </nav>
+  )
+}
+
+export default function App() {
+  const [route, setRoute] = useState<Route>(parseHash)
+
+  useEffect(() => {
+    const onHash = () => setRoute(parseHash())
+    window.addEventListener("hashchange", onHash)
+    return () => window.removeEventListener("hashchange", onHash)
+  }, [])
+
+  return (
+    <div className="min-h-full bg-ink">
+      {route === "participant" && <ParticipantPage />}
+      {route === "display" && <DisplayPage />}
+      {route === "admin" && <AdminPage />}
+      <Nav route={route} />
+    </div>
+  )
+}
