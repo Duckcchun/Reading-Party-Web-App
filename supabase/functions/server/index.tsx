@@ -20,7 +20,7 @@ app.use(
   }),
 );
 
-const BASE = "/make-server-a010eb27";
+const BASE = "/server";
 
 // ─── 비속어 필터 ────────────────────────────────────────────────────────────────
 const BLOCKED = [

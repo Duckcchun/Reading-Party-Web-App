@@ -35,7 +35,7 @@ type State = {
   sentences: Sentence[]
 }
 
-const API = `https://${projectId}.supabase.co/functions/v1/make-server-a010eb27`
+const API = `https://${projectId}.supabase.co/functions/v1/server`
 const HEADERS = {
   "Content-Type": "application/json",
   Authorization: `Bearer ${publicAnonKey}`,
