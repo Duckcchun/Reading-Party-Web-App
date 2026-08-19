@@ -16,7 +16,7 @@
 ### Vercel (프론트엔드)
 
 1. GitHub 연결 후 프로젝트 import
-2. **Root Directory**: `Reading Party Web App` 으로 설정
+2. **Root Directory**: `app` 으로 설정
 3. Framework Preset: Vite (자동 감지됨)
 4. Deploy
 
@@ -39,7 +39,7 @@ Spotify Developer Dashboard에서 Redirect URI에 배포된 주소 등록:
 ## 로컬 개발
 
 ```bash
-cd "Reading Party Web App"
+cd app
 pnpm install
 pnpm dev
 ```
