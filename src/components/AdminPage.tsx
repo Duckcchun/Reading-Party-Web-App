@@ -4,9 +4,13 @@ import {
   clearAdminKey,
   deleteSentence,
   deleteSong,
+  getVolume,
   isAdminUnlocked,
   markPlayed,
   nowPlaying,
+  reorderSong,
+  resetAll,
+  setVolume,
   upNext,
   useStore,
   verifyAdminPassword,
@@ -121,6 +125,93 @@ export default function AdminPage() {
   }
 
   return <AdminDashboard />
+}
+
+function VolumeControl() {
+  const [vol, setVol] = useState(80)
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    getVolume().then((v) => {
+      setVol(v)
+      setLoaded(true)
+    })
+  }, [])
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = Number(e.target.value)
+    setVol(v)
+    setVolume(v)
+  }
+
+  if (!loaded) return null
+
+  return (
+    <div className="mt-8 rounded-xl border border-white/8 bg-panel p-6">
+      <p className="text-xs uppercase tracking-[0.24em] text-lavender/70">볼륨</p>
+      <div className="mt-3 flex items-center gap-4">
+        <span className="text-xs text-lavender/60">🔈</span>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={vol}
+          onChange={handleChange}
+          className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-panel accent-amber"
+        />
+        <span className="text-xs text-lavender/60">🔊</span>
+        <span className="w-8 text-right text-sm tabular-nums text-ivory">{vol}</span>
+      </div>
+    </div>
+  )
+}
+
+function ResetAllControl() {
+  const [armed, setArmed] = useState(false)
+
+  useEffect(() => {
+    if (!armed) return
+    const t = setTimeout(() => setArmed(false), 5000)
+    return () => clearTimeout(t)
+  }, [armed])
+
+  return (
+    <div className="mt-8 rounded-xl border border-red-400/20 bg-panel p-6">
+      <p className="text-xs uppercase tracking-[0.24em] text-red-300/80">위험 구역</p>
+      <p className="mt-2 text-sm text-lavender">
+        곡과 문장을 모두 초기화합니다. 되돌릴 수 없습니다.
+      </p>
+      <div className="mt-4">
+        {!armed ? (
+          <button
+            onClick={() => setArmed(true)}
+            className="rounded-[10px] border border-red-400/30 px-4 py-2.5 text-sm text-red-300 transition-colors hover:border-red-400/50 hover:text-red-200"
+          >
+            모두 초기화
+          </button>
+        ) : (
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-red-300">정말 초기화할까요?</span>
+            <button
+              onClick={() => setArmed(false)}
+              className="rounded-[10px] border border-white/10 px-3 py-2 text-sm text-lavender transition-colors hover:text-ivory"
+            >
+              취소
+            </button>
+            <button
+              onClick={() => {
+                resetAll()
+                setArmed(false)
+              }}
+              className="rounded-[10px] bg-red-400/90 px-4 py-2 text-sm font-medium text-ink transition-transform active:scale-[0.97]"
+            >
+              초기화 실행
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 function AdminDashboard() {
@@ -256,15 +347,33 @@ function AdminDashboard() {
                   {s.artist && <span className="text-lavender"> · {s.artist}</span>}
                 </span>
               </span>
-              <DeleteControl
-                armed={confirmId === s.id}
-                onArm={() => setConfirmId(s.id)}
-                onCancel={() => setConfirmId(null)}
-                onConfirm={() => {
-                  deleteSong(s.id)
-                  setConfirmId(null)
-                }}
-              />
+              <span className="flex shrink-0 items-center gap-1">
+                <button
+                  onClick={() => reorderSong(s.id, "up")}
+                  disabled={i === 0}
+                  className="rounded px-1.5 py-1 text-xs text-lavender/50 transition-colors hover:text-ivory disabled:opacity-30"
+                  title="위로"
+                >
+                  ▲
+                </button>
+                <button
+                  onClick={() => reorderSong(s.id, "down")}
+                  disabled={i === queue.length - 1}
+                  className="rounded px-1.5 py-1 text-xs text-lavender/50 transition-colors hover:text-ivory disabled:opacity-30"
+                  title="아래로"
+                >
+                  ▼
+                </button>
+                <DeleteControl
+                  armed={confirmId === s.id}
+                  onArm={() => setConfirmId(s.id)}
+                  onCancel={() => setConfirmId(null)}
+                  onConfirm={() => {
+                    deleteSong(s.id)
+                    setConfirmId(null)
+                  }}
+                />
+              </span>
             </li>
           ))}
           {!queue.length && (
@@ -311,6 +420,12 @@ function AdminDashboard() {
           <p className="rounded-lg px-4 py-3 text-lavender/60">아직 문장이 없어요.</p>
         )}
       </div>
+
+      {/* 볼륨 조절 */}
+      <VolumeControl />
+
+      {/* 모두 초기화 */}
+      <ResetAllControl />
 
       {/* QR 코드 섹션 */}
       <div className="mt-10 rounded-xl border border-white/8 bg-panel p-6">

@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { markPlayed, nowPlaying, useStore, type Song, type Sentence } from "../lib/store"
+import { markPlayed, nowPlaying, useOnline, useStore, type Song, type Sentence } from "../lib/store"
 import { useSpotifyPlayer } from "../lib/spotify"
+import { extractColors, type RGB } from "../lib/extractColor"
+import WaveBackground from "./WaveBackground"
 
 const HOST = "한강 리딩 파티"
 
 const HOST_MESSAGES = [
-  "오늘 밤, 강변의 도서관이 조용한 라운지로 바뀌어요. 편히 머물러주세요.",
+  "오늘 밤, 도서관이 조용한 라운지로 바뀌어요. 편히 머물러주세요.",
   "노래와 문장을 남겨주시면, 이 자리에 함께 걸립니다.",
 ]
 
@@ -34,21 +36,16 @@ function Clock() {
 function DuskBackdrop() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden bg-ink">
-      <div
-        className="aurora-a absolute -inset-1/4 blur-[130px] will-change-transform"
-        style={{
-          background:
-            "radial-gradient(38% 44% at 24% 28%, rgba(242,166,90,0.30), transparent 70%), radial-gradient(40% 46% at 74% 22%, rgba(120,132,196,0.30), transparent 72%), radial-gradient(46% 50% at 60% 78%, rgba(88,102,168,0.26), transparent 74%)",
-        }}
-      />
-      <div
-        className="aurora-b absolute -inset-1/4 blur-[140px] will-change-transform"
-        style={{
-          background:
-            "radial-gradient(42% 48% at 78% 62%, rgba(242,166,90,0.20), transparent 72%), radial-gradient(44% 50% at 30% 70%, rgba(70,84,150,0.34), transparent 74%), radial-gradient(40% 46% at 50% 12%, rgba(150,152,184,0.16), transparent 72%)",
-        }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-ink/70 via-transparent to-ink/85" />
+      {/* 메시 그라데이션 — 은은한 색감 레이어 (웨이브 뒤에 깔림) */}
+      <div className="absolute inset-0 opacity-50">
+        <div className="mesh-blob blob-1" />
+        <div className="mesh-blob blob-2" />
+        <div className="mesh-blob blob-3" />
+        <div className="mesh-blob blob-4" />
+        <div className="mesh-blob blob-5" />
+      </div>
+      {/* 상하단 깊이감 */}
+      <div className="absolute inset-0 bg-gradient-to-b from-ink/60 via-transparent to-ink/70" />
     </div>
   )
 }
@@ -111,6 +108,7 @@ function Equalizer() {
 
 export default function DisplayPage() {
   const { songs, sentences } = useStore()
+  const isOnline = useOnline()
   const current = nowPlaying(songs)
 
   const items = useMemo<Item[]>(() => {
@@ -184,12 +182,94 @@ export default function DisplayPage() {
     if (!current) playedUri.current = ""
   }, [status, current?.uri, play])
 
+  // ── 듀얼 모드: 곡이 바뀔 때 3.5초간 "무대 모드"를 띄웁니다 ──
+  const [stageMode, setStageMode] = useState<"off" | "enter" | "leave">("off")
+  const [stageSong, setStageSong] = useState<Song | null>(null)
+  const [stageColors, setStageColors] = useState<RGB[]>([[242, 166, 90], [100, 120, 200]])
+  const prevSongId = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!current) {
+      prevSongId.current = null
+      return
+    }
+    // 곡이 처음이거나 바뀌었을 때만 무대 모드 발동
+    if (current.id !== prevSongId.current) {
+      prevSongId.current = current.id
+      setStageSong(current)
+      setStageMode("enter")
+
+      // 앨범 색상 추출
+      if (current.albumImage) {
+        extractColors(current.albumImage).then(setStageColors)
+      }
+
+      // 3초 후 퇴장 시작
+      const leaveTimer = setTimeout(() => setStageMode("leave"), 3000)
+      // 퇴장 애니메이션 후 완전히 숨기기
+      const offTimer = setTimeout(() => setStageMode("off"), 3600)
+
+      return () => {
+        clearTimeout(leaveTimer)
+        clearTimeout(offTimer)
+      }
+    }
+  }, [current?.id])
+
   return (
     <div className="relative flex h-full flex-col overflow-hidden lg:flex-row">
       <DuskBackdrop />
+      <WaveBackground isPlaying={!!current} />
       <AlbumBackdrop url={current?.albumImage} />
       <div className="vignette pointer-events-none absolute inset-0 z-[5]" />
       <div className="grain pointer-events-none absolute z-[6]" />
+
+      {/* ── 무대 모드: 곡 전환 시 화면 전체를 점령하는 오버레이 ─── */}
+      {stageMode !== "off" && stageSong && (
+        <div
+          className={`absolute inset-0 z-50 flex items-center justify-center backdrop-blur-md ${
+            stageMode === "enter" ? "stage-enter" : "stage-leave"
+          }`}
+          style={{
+            background: `radial-gradient(ellipse at 50% 45%, rgba(${stageColors[0].join(",")},0.35) 0%, rgba(${stageColors[1].join(",")},0.15) 40%, rgba(27,33,64,0.92) 70%)`,
+          }}
+        >
+          <div className="flex flex-col items-center gap-8 px-12 text-center">
+            {stageSong.albumImage && (
+              <div className="relative">
+                {/* 앨범 아트 뒤 글로우 */}
+                <div
+                  className="absolute inset-0 scale-110 rounded-3xl blur-[60px] opacity-60"
+                  style={{
+                    background: `linear-gradient(135deg, rgba(${stageColors[0].join(",")},0.8), rgba(${stageColors[1].join(",")},0.6))`,
+                  }}
+                />
+                <img
+                  src={stageSong.albumImage}
+                  alt=""
+                  className="relative h-64 w-64 rounded-3xl object-cover shadow-2xl lg:h-80 lg:w-80"
+                />
+              </div>
+            )}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber">
+                지금 재생
+              </p>
+              <p className="mt-3 font-serif text-4xl leading-snug text-ivory lg:text-5xl">
+                {stageSong.title}
+              </p>
+              {stageSong.artist && (
+                <p className="mt-3 text-xl text-lavender lg:text-2xl">{stageSong.artist}</p>
+              )}
+              {stageSong.name?.trim() && (
+                <p className="mt-5 text-sm text-lavender/60">
+                  {stageSong.name.trim()} 님의 신청곡
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── 왼쪽: 지금 재생 중 ─────────────────────────── */}
       <aside className="relative z-10 flex shrink-0 flex-col justify-between gap-8 border-b border-white/8 bg-ink/25 px-10 py-8 backdrop-blur-[2px] lg:w-[38%] lg:border-b-0 lg:border-r lg:px-12 lg:py-12">
@@ -197,7 +277,15 @@ export default function DisplayPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber">
             {HOST}
           </p>
-          <Clock />
+          <div className="flex items-center gap-3">
+            {!isOnline && (
+              <span className="flex items-center gap-1.5 rounded-full border border-red-400/30 bg-red-400/10 px-3 py-1 text-xs text-red-300">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-400" />
+                연결 복구 중
+              </span>
+            )}
+            <Clock />
+          </div>
         </div>
 
         <div className="flex flex-col">

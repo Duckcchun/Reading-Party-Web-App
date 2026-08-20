@@ -60,6 +60,7 @@ const realtime =
   }))
 
 let state: State = { songs: [], sentences: [], stats: EMPTY_STATS }
+let online = true
 const listeners = new Set<() => void>()
 
 function emit() {
@@ -75,6 +76,10 @@ export function useStore(): State {
   return useSyncExternalStore(subscribe, () => state, () => state)
 }
 
+export function useOnline(): boolean {
+  return useSyncExternalStore(subscribe, () => online, () => online)
+}
+
 async function refresh() {
   try {
     const res = await fetch(`${API}/state`, { headers: HEADERS })
@@ -85,9 +90,10 @@ async function refresh() {
       sentences: data.sentences ?? [],
       stats: data.stats ?? EMPTY_STATS,
     }
+    if (!online) { online = true }
     emit()
   } catch {
-    /* 네트워크 일시 오류는 조용히 넘어갑니다 */
+    if (online) { online = false; emit() }
   }
 }
 
@@ -250,6 +256,42 @@ export async function deleteSentence(id: string) {
     body: JSON.stringify({ id }),
   })
   await notifyAndRefresh()
+}
+
+export async function resetAll() {
+  await fetch(`${API}/reset-all`, {
+    method: "POST",
+    headers: adminHeaders(),
+  })
+  await notifyAndRefresh()
+}
+
+export async function reorderSong(id: string, direction: "up" | "down") {
+  await fetch(`${API}/reorder`, {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({ id, direction }),
+  })
+  await notifyAndRefresh()
+}
+
+export async function setVolume(volume: number) {
+  await fetch(`${API}/volume`, {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({ volume }),
+  })
+}
+
+export async function getVolume(): Promise<number> {
+  try {
+    const res = await fetch(`${API}/volume`, { headers: HEADERS })
+    if (!res.ok) return 80
+    const data = await res.json()
+    return data.volume ?? 80
+  } catch {
+    return 80
+  }
 }
 
 export function nowPlaying(songs: Song[]) {

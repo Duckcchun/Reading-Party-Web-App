@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { isOperator, searchTracks, submitEntry, type Track } from "../lib/store"
+import { isOperator, nowPlaying, searchTracks, submitEntry, useStore, type Track } from "../lib/store"
 import { containsProfanity } from "../lib/profanity"
 
 const fieldClass =
@@ -11,6 +11,9 @@ function fmt(ms: number) {
 }
 
 export default function ParticipantPage() {
+  const { songs } = useStore()
+  const currentSong = nowPlaying(songs)
+
   const [query, setQuery] = useState("")
   const [results, setResults] = useState<Track[]>([])
   const [searching, setSearching] = useState(false)
@@ -170,6 +173,23 @@ export default function ParticipantPage() {
 
   return (
     <div className="mx-auto flex min-h-full w-full max-w-md flex-col px-5 pb-[max(5rem,calc(1.5rem+env(safe-area-inset-bottom)))] pt-[max(2.5rem,calc(1rem+env(safe-area-inset-top)))]">
+      {/* 지금 재생 중 미니 바 */}
+      {currentSong && (
+        <div className="mb-5 flex items-center gap-3 rounded-xl border border-white/8 bg-panel/60 px-4 py-2.5 backdrop-blur-sm">
+          {currentSong.albumImage && (
+            <img src={currentSong.albumImage} alt="" className="h-9 w-9 shrink-0 rounded object-cover" />
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs text-lavender/70">지금 재생 중</p>
+            <p className="truncate text-sm text-ivory">
+              {currentSong.title}
+              {currentSong.artist && <span className="text-lavender"> · {currentSong.artist}</span>}
+            </p>
+          </div>
+          <span className="now-playing-dot h-2 w-2 shrink-0 rounded-full bg-amber" />
+        </div>
+      )}
+
       <header className="mb-7">
         <p className="text-[12px] font-medium uppercase tracking-[0.22em] text-amber/90">
           한강 리딩 파티

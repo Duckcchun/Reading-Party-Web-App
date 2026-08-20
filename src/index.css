@@ -76,28 +76,85 @@ textarea:focus-visible {
   animation: sentence-rise 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* 해질녘 강변의 배경 — 여러 겹의 빛무리가 아주 느리고 부드럽게 흐릅니다 */
-@keyframes aurora-a {
-  0% {
-    transform: translate3d(-8%, -6%, 0) scale(1.15) rotate(0deg);
-  }
-  100% {
-    transform: translate3d(8%, 6%, 0) scale(1.25) rotate(8deg);
-  }
+/* 해질녘 강변의 배경 — 유체 메시 그라데이션
+   4~5개의 색 덩어리가 서로 다른 궤도로 느리게 표류하며 겹칠 때 색이 섞입니다.
+   앨범 아트 블러 레이어와 함께 쓰면 곡마다 무드가 바뀝니다. */
+@keyframes blob-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(12%, 8%) scale(1.08); }
+  50% { transform: translate(-6%, 14%) scale(0.95); }
+  75% { transform: translate(-14%, -4%) scale(1.04); }
 }
-@keyframes aurora-b {
-  0% {
-    transform: translate3d(6%, 8%, 0) scale(1.2) rotate(0deg);
-  }
-  100% {
-    transform: translate3d(-6%, -8%, 0) scale(1.12) rotate(-10deg);
-  }
+@keyframes blob-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(-10%, -12%) scale(1.1); }
+  50% { transform: translate(8%, -6%) scale(0.92); }
+  75% { transform: translate(14%, 10%) scale(1.06); }
 }
-.aurora-a {
-  animation: aurora-a 40s ease-in-out infinite alternate;
+@keyframes blob-3 {
+  0%, 100% { transform: translate(0, 0) scale(1.02); }
+  33% { transform: translate(16%, -8%) scale(0.94); }
+  66% { transform: translate(-12%, 12%) scale(1.08); }
 }
-.aurora-b {
-  animation: aurora-b 52s ease-in-out infinite alternate;
+@keyframes blob-4 {
+  0%, 100% { transform: translate(0, 0) scale(0.98); }
+  30% { transform: translate(-8%, 16%) scale(1.06); }
+  60% { transform: translate(10%, -10%) scale(0.92); }
+}
+@keyframes blob-5 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  20% { transform: translate(6%, -14%) scale(1.12); }
+  40% { transform: translate(-10%, 4%) scale(0.96); }
+  60% { transform: translate(14%, 12%) scale(1.04); }
+  80% { transform: translate(-6%, -8%) scale(0.98); }
+}
+
+.mesh-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+.blob-1 {
+  width: 45%;
+  height: 55%;
+  top: -10%;
+  left: -5%;
+  background: radial-gradient(circle, rgba(242,166,90,0.55) 0%, transparent 70%);
+  animation: blob-1 28s ease-in-out infinite;
+}
+.blob-2 {
+  width: 40%;
+  height: 50%;
+  top: 10%;
+  right: -8%;
+  background: radial-gradient(circle, rgba(100,120,200,0.50) 0%, transparent 70%);
+  animation: blob-2 34s ease-in-out infinite;
+}
+.blob-3 {
+  width: 50%;
+  height: 45%;
+  bottom: -12%;
+  left: 20%;
+  background: radial-gradient(circle, rgba(88,60,160,0.45) 0%, transparent 70%);
+  animation: blob-3 38s ease-in-out infinite;
+}
+.blob-4 {
+  width: 35%;
+  height: 40%;
+  top: 40%;
+  left: -10%;
+  background: radial-gradient(circle, rgba(200,140,80,0.35) 0%, transparent 70%);
+  animation: blob-4 42s ease-in-out infinite;
+}
+.blob-5 {
+  width: 38%;
+  height: 42%;
+  bottom: 5%;
+  right: 5%;
+  background: radial-gradient(circle, rgba(60,80,160,0.40) 0%, transparent 70%);
+  animation: blob-5 32s ease-in-out infinite;
 }
 
 @keyframes soft-pulse {
@@ -255,4 +312,36 @@ textarea:focus-visible {
 }
 .intro-leave {
   animation: intro-leave 1.1s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* ─── 듀얼 모드: 무대 전환 ─── */
+@keyframes stage-enter {
+  from {
+    opacity: 0;
+    transform: scale(1.05);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+@keyframes stage-leave {
+  from {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+    filter: blur(4px);
+  }
+}
+.stage-enter {
+  animation: stage-enter 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.stage-leave {
+  animation: stage-leave 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
 }

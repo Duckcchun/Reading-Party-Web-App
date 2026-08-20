@@ -138,16 +138,20 @@ app.get(`${BASE}/search`, async (c) => {
   const q = c.req.query("q")?.trim();
   if (!q) return c.json({ tracks: [] });
 
-  const token = await getSpotifyToken();
-  if (!token) return c.json({ tracks: [], error: "spotify_token_failed" }, 500);
-
   try {
+    const token = await getSpotifyToken();
+    if (!token) return c.json({ tracks: [], error: "spotify_token_failed" }, 500);
+
     const url = `https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=track&market=KR&limit=8`;
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    if (!res.ok) return c.json({ tracks: [] });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("search API error:", res.status, errText);
+      return c.json({ tracks: [] });
+    }
 
     const data = await res.json();
     const tracks = (data.tracks?.items ?? []).map((t: any) => ({
@@ -162,7 +166,7 @@ app.get(`${BASE}/search`, async (c) => {
     return c.json({ tracks });
   } catch (e) {
     console.error("search error:", e);
-    return c.json({ tracks: [] });
+    return c.json({ tracks: [], error: String(e) }, 500);
   }
 });
 
@@ -333,6 +337,88 @@ app.post(`${BASE}/delete-sentence`, async (c) => {
     return c.json({ ok: true });
   } catch (e) {
     console.error("delete-sentence error:", e);
+    return c.json({ error: "server" }, 500);
+  }
+});
+
+// ─── POST /reset-all — 진행자가 곡+문장 전부 초기화 ─────────────────────────────
+app.post(`${BASE}/reset-all`, async (c) => {
+  if (!isAdmin(c)) return c.json({ error: "unauthorized" }, 401);
+
+  try {
+    await kv.set("songs", []);
+    await kv.set("sentences", []);
+    return c.json({ ok: true });
+  } catch (e) {
+    console.error("reset-all error:", e);
+    return c.json({ error: "server" }, 500);
+  }
+});
+
+// ─── POST /reorder — 대기열 순서 변경 ───────────────────────────────────────────
+// body: { id: string, direction: "up" | "down" }
+app.post(`${BASE}/reorder`, async (c) => {
+  if (!isAdmin(c)) return c.json({ error: "unauthorized" }, 401);
+
+  const body = await c.req.json();
+  const { id, direction } = body;
+
+  if (!id || !direction) return c.json({ error: "missing params" }, 400);
+
+  try {
+    const songs: any[] = (await kv.get("songs")) ?? [];
+
+    // 대기열만 시간순으로 추출
+    const queued = songs
+      .filter((s: any) => s.status === "queued")
+      .sort((a: any, b: any) => a.createdAt - b.createdAt);
+
+    const qIdx = queued.findIndex((s: any) => s.id === id);
+    if (qIdx === -1) return c.json({ error: "not_found" }, 404);
+
+    // 위/아래 곡과 createdAt을 스왑해서 순서를 변경합니다
+    const swapIdx = direction === "up" ? qIdx - 1 : qIdx + 1;
+    if (swapIdx < 0 || swapIdx >= queued.length) return c.json({ ok: true }); // 이동 불가 — 조용히 무시
+
+    // 실제 songs 배열에서 해당 곡의 createdAt을 교환
+    const songA = songs.find((s: any) => s.id === queued[qIdx].id);
+    const songB = songs.find((s: any) => s.id === queued[swapIdx].id);
+    if (songA && songB) {
+      const tmp = songA.createdAt;
+      songA.createdAt = songB.createdAt;
+      songB.createdAt = tmp;
+    }
+
+    await kv.set("songs", songs);
+    return c.json({ ok: true });
+  } catch (e) {
+    console.error("reorder error:", e);
+    return c.json({ error: "server" }, 500);
+  }
+});
+
+// ─── GET/POST /volume — 디스플레이 볼륨 원격 제어 ───────────────────────────────
+// 볼륨 값을 KV에 저장해두고, 디스플레이가 폴링으로 읽어 적용합니다.
+app.get(`${BASE}/volume`, async (c) => {
+  try {
+    const vol = (await kv.get("volume")) ?? 80;
+    return c.json({ volume: vol });
+  } catch {
+    return c.json({ volume: 80 });
+  }
+});
+
+app.post(`${BASE}/volume`, async (c) => {
+  if (!isAdmin(c)) return c.json({ error: "unauthorized" }, 401);
+
+  const body = await c.req.json();
+  const vol = Math.max(0, Math.min(100, Number(body.volume) || 80));
+
+  try {
+    await kv.set("volume", vol);
+    return c.json({ ok: true, volume: vol });
+  } catch (e) {
+    console.error("volume error:", e);
     return c.json({ error: "server" }, 500);
   }
 });
