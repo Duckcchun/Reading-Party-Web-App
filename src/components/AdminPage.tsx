@@ -157,7 +157,7 @@ function VolumeControl() {
           max={100}
           value={vol}
           onChange={handleChange}
-          className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-panel accent-amber"
+          className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-white/15 accent-amber [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber [&::-webkit-slider-thumb]:shadow-md"
         />
         <span className="text-xs text-lavender/60">🔊</span>
         <span className="w-8 text-right text-sm tabular-nums text-ivory">{vol}</span>

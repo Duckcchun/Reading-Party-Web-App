@@ -204,10 +204,10 @@ export default function DisplayPage() {
         extractColors(current.albumImage).then(setStageColors)
       }
 
-      // 3초 후 퇴장 시작
-      const leaveTimer = setTimeout(() => setStageMode("leave"), 3000)
+      // 2초 후 퇴장 시작
+      const leaveTimer = setTimeout(() => setStageMode("leave"), 2000)
       // 퇴장 애니메이션 후 완전히 숨기기
-      const offTimer = setTimeout(() => setStageMode("off"), 3600)
+      const offTimer = setTimeout(() => setStageMode("off"), 2600)
 
       return () => {
         clearTimeout(leaveTimer)
