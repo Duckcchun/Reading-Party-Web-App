@@ -1,7 +1,7 @@
 import { Hono } from "npm:hono";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
-import * as kv from "./kv_store.tsx";
+import * as kv from "./kv_store.ts";
 
 const app = new Hono();
 
@@ -13,7 +13,7 @@ app.use(
   "/*",
   cors({
     origin: "*",
-    allowHeaders: ["Content-Type", "Authorization"],
+    allowHeaders: ["Content-Type", "Authorization", "x-admin-key"],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     exposeHeaders: ["Content-Length"],
     maxAge: 600,
@@ -21,6 +21,16 @@ app.use(
 );
 
 const BASE = "/server";
+
+// ─── 진행자 인증 ────────────────────────────────────────────────────────────────
+// 비밀번호는 Supabase secret(HRP_ADMIN_PASSWORD)에만 두고 프론트엔드 번들에는 넣지 않습니다.
+const adminPassword = () => Deno.env.get("HRP_ADMIN_PASSWORD") ?? "";
+
+function isAdmin(c: { req: { header: (k: string) => string | undefined } }): boolean {
+  const expected = adminPassword();
+  if (!expected) return false;
+  return c.req.header("x-admin-key") === expected;
+}
 
 // ─── 비속어 필터 ────────────────────────────────────────────────────────────────
 const BLOCKED = [
@@ -38,22 +48,33 @@ let spotifyToken: { access: string; expiresAt: number } | null = null;
 async function getSpotifyToken(): Promise<string | null> {
   const clientId = Deno.env.get("SPOTIFY_CLIENT_ID");
   const clientSecret = Deno.env.get("SPOTIFY_CLIENT_SECRET");
-  if (!clientId || !clientSecret) return null;
+  if (!clientId || !clientSecret) {
+    console.error("Missing Spotify credentials:", { hasId: !!clientId, hasSecret: !!clientSecret });
+    return null;
+  }
 
   if (spotifyToken && spotifyToken.expiresAt > Date.now() + 10000) {
     return spotifyToken.access;
   }
 
+  const credentials = `${clientId}:${clientSecret}`;
+  const encoded = btoa(credentials);
+  console.log("Spotify token request:", { clientId, secretLength: clientSecret.length });
+
   const res = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+      Authorization: `Basic ${encoded}`,
     },
     body: new URLSearchParams({ grant_type: "client_credentials" }),
   });
 
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const errBody = await res.text();
+    console.error("Spotify token error:", res.status, errBody);
+    return null;
+  }
   const data = await res.json();
   spotifyToken = {
     access: data.access_token,
@@ -73,17 +94,42 @@ app.get(`${BASE}/config`, (c) => {
   return c.json({ clientId });
 });
 
+// ─── POST /admin-auth — 진행자 비밀번호 확인 ────────────────────────────────────
+app.post(`${BASE}/admin-auth`, async (c) => {
+  const expected = adminPassword();
+  if (!expected) return c.json({ error: "not_configured" }, 500);
+
+  let password = "";
+  try {
+    password = (await c.req.json()).password ?? "";
+  } catch {
+    return c.json({ error: "bad_request" }, 400);
+  }
+
+  if (password !== expected) return c.json({ error: "unauthorized" }, 401);
+  return c.json({ ok: true });
+});
+
 // ─── GET /state — 현재 곡 목록 + 문장 목록 ─────────────────────────────────────
 app.get(`${BASE}/state`, async (c) => {
   try {
     const allSongs: any[] = (await kv.get("songs")) ?? [];
-    const sentences = (await kv.get("sentences")) ?? [];
-    // done 상태인 곡은 클라이언트에 보내지 않음 (payload 경량화)
+    const sentences: any[] = (await kv.get("sentences")) ?? [];
+    // done 상태인 곡은 목록에서 빼지만(payload 경량화), 집계는 전체 기준으로 내려줍니다.
     const songs = allSongs.filter((s: any) => s.status !== "done");
-    return c.json({ songs, sentences });
+    const stats = {
+      totalSongs: allSongs.length,
+      doneSongs: allSongs.filter((s: any) => s.status === "done").length,
+      totalSentences: sentences.length,
+    };
+    return c.json({ songs, sentences, stats });
   } catch (e) {
     console.error("state error:", e);
-    return c.json({ songs: [], sentences: [] });
+    return c.json({
+      songs: [],
+      sentences: [],
+      stats: { totalSongs: 0, doneSongs: 0, totalSentences: 0 },
+    });
   }
 });
 
@@ -93,7 +139,7 @@ app.get(`${BASE}/search`, async (c) => {
   if (!q) return c.json({ tracks: [] });
 
   const token = await getSpotifyToken();
-  if (!token) return c.json({ tracks: [] }, 500);
+  if (!token) return c.json({ tracks: [], error: "spotify_token_failed" }, 500);
 
   try {
     const url = `https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=track&market=KR&limit=8`;
@@ -184,17 +230,10 @@ app.post(`${BASE}/submit`, async (c) => {
       sentences.push(sentence);
     }
 
-    // 오래된 done 곡 정리 (1시간 이상 지난 것)
-    const ONE_HOUR = 60 * 60 * 1000;
-    const cleanedSongs = songs.filter(
-      (s: any) => s.status !== "done" || now - s.createdAt < ONE_HOUR
-    );
-
-    // 오래된 문장 정리 (2시간 이상 지난 것)
-    const TWO_HOURS = 2 * 60 * 60 * 1000;
-    const cleanedSentences = sentences.filter(
-      (s: any) => now - s.createdAt < TWO_HOURS
-    );
+    // 보존 기간: 행사 하루가 온전히 남도록 24시간. (행사 중 유실을 막는 것이 우선)
+    const RETENTION = 24 * 60 * 60 * 1000;
+    const cleanedSongs = songs.filter((s: any) => now - s.createdAt < RETENTION);
+    const cleanedSentences = sentences.filter((s: any) => now - s.createdAt < RETENTION);
 
     await kv.set("songs", cleanedSongs);
     await kv.set("sentences", cleanedSentences);
@@ -246,6 +285,8 @@ app.post(`${BASE}/played`, async (c) => {
 
 // ─── DELETE /song — 진행자가 곡 삭제 ────────────────────────────────────────────
 app.post(`${BASE}/delete-song`, async (c) => {
+  if (!isAdmin(c)) return c.json({ error: "unauthorized" }, 401);
+
   const body = await c.req.json();
   const { id } = body;
 
@@ -273,6 +314,25 @@ app.post(`${BASE}/delete-song`, async (c) => {
     return c.json({ ok: true });
   } catch (e) {
     console.error("delete-song error:", e);
+    return c.json({ error: "server" }, 500);
+  }
+});
+
+// ─── POST /delete-sentence — 진행자가 문장 삭제 ─────────────────────────────────
+app.post(`${BASE}/delete-sentence`, async (c) => {
+  if (!isAdmin(c)) return c.json({ error: "unauthorized" }, 401);
+
+  const body = await c.req.json();
+  const { id } = body;
+
+  if (!id) return c.json({ error: "missing id" }, 400);
+
+  try {
+    const sentences: any[] = (await kv.get("sentences")) ?? [];
+    await kv.set("sentences", sentences.filter((s: any) => s.id !== id));
+    return c.json({ ok: true });
+  } catch (e) {
+    console.error("delete-sentence error:", e);
     return c.json({ error: "server" }, 500);
   }
 });

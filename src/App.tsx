@@ -66,11 +66,12 @@ export default function App() {
   }, [])
 
   return (
-    <div className="min-h-full bg-ink">
+    <div className={route === "display" ? "h-full bg-ink" : "min-h-full bg-ink"}>
       {route === "participant" && <ParticipantPage />}
       {route === "display" && <DisplayPage />}
       {route === "admin" && <AdminPage />}
-      {route !== "display" && <Nav route={route} />}
+      {/* 참가자·디스플레이 화면에는 이동 링크를 두지 않습니다 (현장 혼선 방지) */}
+      {route === "admin" && <Nav route={route} />}
     </div>
   )
 }

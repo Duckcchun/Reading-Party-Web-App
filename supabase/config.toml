@@ -1,0 +1,18 @@
+# Supabase CLI 설정 파일
+# 참고: https://supabase.com/docs/guides/cli/config
+
+[api]
+enabled = true
+port = 54321
+
+[db]
+port = 54322
+
+[studio]
+enabled = true
+port = 54323
+
+[functions]
+# Edge Functions 배포 시 기본 설정
+[functions.server]
+verify_jwt = false

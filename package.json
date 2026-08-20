@@ -7,11 +7,14 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
-    "format": "oxfmt"
+    "format": "oxfmt",
+    "deploy:functions": "supabase functions deploy server --project-ref ellwyzmsqbocrnsxwucz --no-verify-jwt",
+    "deploy": "pnpm run build && vercel --prod"
   },
   "dependencies": {
     "@supabase/realtime-js": "^2.112.3",
     "@supabase/supabase-js": "^2.112.3",
+    "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

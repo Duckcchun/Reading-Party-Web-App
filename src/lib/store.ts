@@ -30,10 +30,19 @@ export type Sentence = {
   createdAt: number
 }
 
+export type Stats = {
+  totalSongs: number
+  doneSongs: number
+  totalSentences: number
+}
+
 type State = {
   songs: Song[]
   sentences: Sentence[]
+  stats: Stats
 }
+
+const EMPTY_STATS: Stats = { totalSongs: 0, doneSongs: 0, totalSentences: 0 }
 
 const API = `https://${projectId}.supabase.co/functions/v1/server`
 const HEADERS = {
@@ -50,7 +59,7 @@ const realtime =
     params: { apikey: publicAnonKey },
   }))
 
-let state: State = { songs: [], sentences: [] }
+let state: State = { songs: [], sentences: [], stats: EMPTY_STATS }
 const listeners = new Set<() => void>()
 
 function emit() {
@@ -71,7 +80,11 @@ async function refresh() {
     const res = await fetch(`${API}/state`, { headers: HEADERS })
     if (!res.ok) return
     const data = (await res.json()) as State
-    state = { songs: data.songs ?? [], sentences: data.sentences ?? [] }
+    state = {
+      songs: data.songs ?? [],
+      sentences: data.sentences ?? [],
+      stats: data.stats ?? EMPTY_STATS,
+    }
     emit()
   } catch {
     /* 네트워크 일시 오류는 조용히 넘어갑니다 */
@@ -162,10 +175,64 @@ export async function markPlayed(id: string) {
   await notifyAndRefresh()
 }
 
+// ─── 진행자 인증 ────────────────────────────────────────────────────────────────
+// 비밀번호는 서버(Supabase secret)에서만 검증합니다. 번들에는 값이 들어가지 않습니다.
+const ADMIN_KEY = "hrp-admin-key"
+
+function readAdminKey(): string {
+  try {
+    return sessionStorage.getItem(ADMIN_KEY) ?? ""
+  } catch {
+    return ""
+  }
+}
+
+export function isAdminUnlocked(): boolean {
+  return readAdminKey().length > 0
+}
+
+export function clearAdminKey() {
+  try {
+    sessionStorage.removeItem(ADMIN_KEY)
+  } catch {
+    /* 무시 */
+  }
+}
+
+export async function verifyAdminPassword(password: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${API}/admin-auth`, {
+      method: "POST",
+      headers: HEADERS,
+      body: JSON.stringify({ password }),
+    })
+    if (!res.ok) return false
+    try {
+      sessionStorage.setItem(ADMIN_KEY, password)
+    } catch {
+      /* 무시 */
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
+const adminHeaders = () => ({ ...HEADERS, "x-admin-key": readAdminKey() })
+
 export async function deleteSong(id: string) {
   await fetch(`${API}/delete-song`, {
     method: "POST",
-    headers: HEADERS,
+    headers: adminHeaders(),
+    body: JSON.stringify({ id }),
+  })
+  await notifyAndRefresh()
+}
+
+export async function deleteSentence(id: string) {
+  await fetch(`${API}/delete-sentence`, {
+    method: "POST",
+    headers: adminHeaders(),
     body: JSON.stringify({ id }),
   })
   await notifyAndRefresh()
