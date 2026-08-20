@@ -178,6 +178,9 @@ export async function markPlayed(id: string) {
 // ─── 진행자 인증 ────────────────────────────────────────────────────────────────
 // 비밀번호는 서버(Supabase secret)에서만 검증합니다. 번들에는 값이 들어가지 않습니다.
 const ADMIN_KEY = "hrp-admin-key"
+// 진행자 로그인에 성공한 "기기"임을 기억합니다. 비밀번호 자체는 저장하지 않고,
+// 이 기기에서만 화면 이동 버튼 같은 운영자용 UI를 보여주는 데 씁니다.
+const OPERATOR_FLAG = "hrp-operator"
 
 function readAdminKey(): string {
   try {
@@ -191,9 +194,19 @@ export function isAdminUnlocked(): boolean {
   return readAdminKey().length > 0
 }
 
+// 진행자 기기 여부 (탭을 새로 열어도 유지됩니다)
+export function isOperator(): boolean {
+  try {
+    return localStorage.getItem(OPERATOR_FLAG) === "1"
+  } catch {
+    return false
+  }
+}
+
 export function clearAdminKey() {
   try {
     sessionStorage.removeItem(ADMIN_KEY)
+    localStorage.removeItem(OPERATOR_FLAG)
   } catch {
     /* 무시 */
   }
@@ -209,6 +222,7 @@ export async function verifyAdminPassword(password: string): Promise<boolean> {
     if (!res.ok) return false
     try {
       sessionStorage.setItem(ADMIN_KEY, password)
+      localStorage.setItem(OPERATOR_FLAG, "1")
     } catch {
       /* 무시 */
     }

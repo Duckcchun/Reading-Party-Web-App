@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import ParticipantPage from "./components/ParticipantPage"
 import DisplayPage from "./components/DisplayPage"
 import AdminPage from "./components/AdminPage"
+import { isOperator } from "./lib/store"
 
 type Route = "participant" | "display" | "admin"
 
@@ -70,8 +71,11 @@ export default function App() {
       {route === "participant" && <ParticipantPage />}
       {route === "display" && <DisplayPage />}
       {route === "admin" && <AdminPage />}
-      {/* 참가자·디스플레이 화면에는 이동 링크를 두지 않습니다 (현장 혼선 방지) */}
-      {route === "admin" && <Nav route={route} />}
+      {/* 이동 링크는 진행자 화면, 그리고 진행자로 로그인한 기기의 참가자 화면에만 노출합니다.
+          참가자 폰에는 보이지 않고, 디스플레이는 투사 화면이라 항상 깨끗하게 둡니다. */}
+      {(route === "admin" || (route === "participant" && isOperator())) && (
+        <Nav route={route} />
+      )}
     </div>
   )
 }

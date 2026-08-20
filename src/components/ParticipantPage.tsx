@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { searchTracks, submitEntry, type Track } from "../lib/store"
+import { isOperator, searchTracks, submitEntry, type Track } from "../lib/store"
 import { containsProfanity } from "../lib/profanity"
 
 const fieldClass =
@@ -41,6 +41,15 @@ export default function ParticipantPage() {
 
   const [submitCount, setSubmitCount] = useState(getSubmitCount)
   const reachedLimit = submitCount >= MAX_SUBMISSIONS
+
+  // 리허설·테스트용. 진행자로 로그인한 기기에서만 노출됩니다.
+  function resetSubmitCount() {
+    try {
+      localStorage.removeItem(STORAGE_KEY)
+    } catch { /* 무시 */ }
+    setSubmitCount(0)
+    setDone(false)
+  }
 
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null)
   const abortRef = useRef<AbortController | null>(null)
@@ -147,6 +156,14 @@ export default function ParticipantPage() {
         <p className="mt-3 text-[15px] leading-relaxed text-lavender">
           남겨주신 노래와 문장,<br />큰 화면에서 함께 만나요.
         </p>
+        {isOperator() && (
+          <button
+            onClick={resetSubmitCount}
+            className="mt-10 rounded-[10px] border border-white/10 px-5 py-2.5 text-xs text-lavender/70 transition-colors hover:border-amber/30 hover:text-ivory"
+          >
+            제출 횟수 초기화 (진행자 전용)
+          </button>
+        )}
       </div>
     )
   }

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { QRCodeSVG } from "qrcode.react"
 import {
   clearAdminKey,
@@ -66,6 +66,53 @@ function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
   )
 }
 
+// 삭제는 되돌릴 수 없어서 항상 한 번 되묻습니다.
+function DeleteControl({
+  armed,
+  onArm,
+  onCancel,
+  onConfirm,
+  variant = "compact",
+}: {
+  armed: boolean
+  onArm: () => void
+  onCancel: () => void
+  onConfirm: () => void
+  variant?: "compact" | "regular"
+}) {
+  const compact = variant === "compact"
+
+  const armClass = compact
+    ? "shrink-0 rounded-md px-2.5 py-1 text-xs text-lavender/60 transition-colors hover:text-red-300"
+    : "shrink-0 rounded-[10px] border border-white/10 px-3 py-2.5 text-sm text-lavender transition-colors hover:border-red-400/40 hover:text-red-300"
+  const cancelClass = compact
+    ? "rounded-md border border-white/10 px-2.5 py-1 text-xs text-lavender transition-colors hover:text-ivory"
+    : "rounded-[10px] border border-white/10 px-3 py-2.5 text-sm text-lavender transition-colors hover:text-ivory"
+  const confirmClass = compact
+    ? "rounded-md bg-red-400/90 px-2.5 py-1 text-xs font-medium text-ink transition-transform active:scale-[0.97]"
+    : "rounded-[10px] bg-red-400/90 px-4 py-2.5 text-sm font-medium text-ink transition-transform active:scale-[0.97]"
+
+  if (!armed) {
+    return (
+      <button onClick={onArm} className={armClass}>
+        삭제
+      </button>
+    )
+  }
+
+  return (
+    <div className="flex shrink-0 items-center gap-1.5">
+      <span className="mr-0.5 hidden text-xs text-lavender/70 sm:inline">삭제할까요?</span>
+      <button onClick={onCancel} className={cancelClass}>
+        취소
+      </button>
+      <button onClick={onConfirm} className={confirmClass}>
+        삭제
+      </button>
+    </div>
+  )
+}
+
 export default function AdminPage() {
   const [authed, setAuthed] = useState(isAdminUnlocked)
 
@@ -80,6 +127,16 @@ function AdminDashboard() {
   const { songs, sentences, stats } = useStore()
   const current = nowPlaying(songs)
   const queue = upNext(songs)
+
+  // 삭제 확인 중인 항목(곡·문장 공용). 한 번에 하나만 열립니다.
+  const [confirmId, setConfirmId] = useState<string | null>(null)
+
+  // 확인 상태를 열어둔 채 방치되면 스스로 닫힙니다.
+  useEffect(() => {
+    if (!confirmId) return
+    const t = setTimeout(() => setConfirmId(null), 5000)
+    return () => clearTimeout(t)
+  }, [confirmId])
 
   return (
     <div className="mx-auto w-full max-w-2xl px-6 py-12">
@@ -136,18 +193,25 @@ function AdminDashboard() {
               </div>
             </div>
             <div className="flex shrink-0 gap-2">
-              <button
-                onClick={() => deleteSong(current.id)}
-                className="rounded-[10px] border border-white/10 px-3 py-2.5 text-sm text-lavender transition-colors hover:border-red-400/40 hover:text-red-300"
-              >
-                삭제
-              </button>
-              <button
-                onClick={() => markPlayed(current.id)}
-                className="rounded-[10px] bg-amber px-4 py-2.5 font-medium text-ink transition-transform duration-150 active:scale-[0.985]"
-              >
-                재생완료
-              </button>
+              <DeleteControl
+                variant="regular"
+                armed={confirmId === current.id}
+                onArm={() => setConfirmId(current.id)}
+                onCancel={() => setConfirmId(null)}
+                onConfirm={() => {
+                  deleteSong(current.id)
+                  setConfirmId(null)
+                }}
+              />
+              {/* 삭제 확인 중에는 재생완료를 숨겨 오조작을 막습니다 */}
+              {confirmId !== current.id && (
+                <button
+                  onClick={() => markPlayed(current.id)}
+                  className="rounded-[10px] bg-amber px-4 py-2.5 font-medium text-ink transition-transform duration-150 active:scale-[0.985]"
+                >
+                  재생완료
+                </button>
+              )}
             </div>
           </div>
         ) : (
@@ -192,12 +256,15 @@ function AdminDashboard() {
                   {s.artist && <span className="text-lavender"> · {s.artist}</span>}
                 </span>
               </span>
-              <button
-                onClick={() => deleteSong(s.id)}
-                className="shrink-0 rounded-md px-2.5 py-1 text-xs text-lavender/60 transition-colors hover:text-red-300"
-              >
-                삭제
-              </button>
+              <DeleteControl
+                armed={confirmId === s.id}
+                onArm={() => setConfirmId(s.id)}
+                onCancel={() => setConfirmId(null)}
+                onConfirm={() => {
+                  deleteSong(s.id)
+                  setConfirmId(null)
+                }}
+              />
             </li>
           ))}
           {!queue.length && (
@@ -228,12 +295,15 @@ function AdminDashboard() {
                     {s.name?.trim() || "익명"} · {new Date(s.createdAt).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
                   </p>
                 </div>
-                <button
-                  onClick={() => deleteSentence(s.id)}
-                  className="shrink-0 rounded-md px-2.5 py-1 text-xs text-lavender/60 transition-colors hover:text-red-300"
-                >
-                  삭제
-                </button>
+                <DeleteControl
+                  armed={confirmId === s.id}
+                  onArm={() => setConfirmId(s.id)}
+                  onCancel={() => setConfirmId(null)}
+                  onConfirm={() => {
+                    deleteSentence(s.id)
+                    setConfirmId(null)
+                  }}
+                />
               </li>
             ))}
           </ul>
