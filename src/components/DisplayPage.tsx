@@ -5,6 +5,7 @@ import { extractColors, type RGB } from "../lib/extractColor"
 import WaveBackground from "./WaveBackground"
 
 const HOST = "한강 리딩 파티"
+const EVENT_DATE = "2026. 8. 23. 토요일"
 
 const HOST_MESSAGES = [
   "오늘 밤, 도서관이 조용한 라운지로 바뀌어요. 편히 머물러주세요.",
@@ -27,7 +28,7 @@ function Clock() {
     return () => clearInterval(id)
   }, [])
   return (
-    <span className="tabular-nums text-sm text-lavender/50">
+    <span className="tabular-nums text-lg text-lavender/50">
       {now.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
     </span>
   )
@@ -36,7 +37,6 @@ function Clock() {
 function DuskBackdrop() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden bg-ink">
-      {/* 메시 그라데이션 — 은은한 색감 레이어 (웨이브 뒤에 깔림) */}
       <div className="absolute inset-0 opacity-50">
         <div className="mesh-blob blob-1" />
         <div className="mesh-blob blob-2" />
@@ -44,13 +44,11 @@ function DuskBackdrop() {
         <div className="mesh-blob blob-4" />
         <div className="mesh-blob blob-5" />
       </div>
-      {/* 상하단 깊이감 */}
       <div className="absolute inset-0 bg-gradient-to-b from-ink/60 via-transparent to-ink/70" />
     </div>
   )
 }
 
-// 지금 재생 중인 곡의 앨범 아트를 블러 배경으로. 곡이 바뀌면 두 겹이 교차되며 색이 넘어갑니다.
 function AlbumBackdrop({ url }: { url?: string }) {
   const [layers, setLayers] = useState<{ id: number; url: string }[]>([])
   const idRef = useRef(0)
@@ -67,7 +65,6 @@ function AlbumBackdrop({ url }: { url?: string }) {
     })
   }, [url])
 
-  // 교차가 끝나면 아래 레이어를 정리합니다.
   useEffect(() => {
     if (layers.length < 2) return
     const t = setTimeout(() => setLayers((p) => p.slice(-1)), 2200)
@@ -90,11 +87,11 @@ function AlbumBackdrop({ url }: { url?: string }) {
 function Equalizer() {
   const bars = [0, 1, 2, 3, 4]
   return (
-    <div className="flex h-6 items-end gap-1.5">
+    <div className="flex h-5 items-end gap-1">
       {bars.map((b) => (
         <span
           key={b}
-          className="eq-bar w-1.5 rounded-full bg-amber/80"
+          className="eq-bar w-1 rounded-full bg-amber/80"
           style={{
             height: "100%",
             animationDelay: `${b * 0.18}s`,
@@ -124,7 +121,7 @@ export default function DisplayPage() {
 
   const hasContent = items.length > 0
 
-  // 인트로 안내는 피드가 비어 있을 때만 머물고, 첫 말풍선이 도착하면 접히며 사라집니다.
+  // 인트로
   const [intro, setIntro] = useState<"in" | "out" | "gone">(hasContent ? "gone" : "in")
   useEffect(() => {
     if (!hasContent) {
@@ -139,10 +136,9 @@ export default function DisplayPage() {
     return () => clearTimeout(t)
   }, [intro])
 
-  // 인트로 말풍선에 붙일 시각 (화면을 띄운 시점 기준)
   const introAt = useRef(Date.now()).current
 
-  // 새로 도착한 항목 감지 (등장 애니메이션 + 글로우용)
+  // 새 항목 감지
   const seen = useRef<Set<string> | null>(null)
   const [newIds, setNewIds] = useState<Set<string>>(new Set())
   useEffect(() => {
@@ -182,7 +178,7 @@ export default function DisplayPage() {
     if (!current) playedUri.current = ""
   }, [status, current?.uri, play])
 
-  // ── 듀얼 모드: 곡이 바뀔 때 3.5초간 "무대 모드"를 띄웁니다 ──
+  // 듀얼 모드
   const [stageMode, setStageMode] = useState<"off" | "enter" | "leave">("off")
   const [stageSong, setStageSong] = useState<Song | null>(null)
   const [stageColors, setStageColors] = useState<RGB[]>([[242, 166, 90], [100, 120, 200]])
@@ -193,20 +189,16 @@ export default function DisplayPage() {
       prevSongId.current = null
       return
     }
-    // 곡이 처음이거나 바뀌었을 때만 무대 모드 발동
     if (current.id !== prevSongId.current) {
       prevSongId.current = current.id
       setStageSong(current)
       setStageMode("enter")
 
-      // 앨범 색상 추출
       if (current.albumImage) {
         extractColors(current.albumImage).then(setStageColors)
       }
 
-      // 2초 후 퇴장 시작
       const leaveTimer = setTimeout(() => setStageMode("leave"), 2000)
-      // 퇴장 애니메이션 후 완전히 숨기기
       const offTimer = setTimeout(() => setStageMode("off"), 2600)
 
       return () => {
@@ -217,27 +209,26 @@ export default function DisplayPage() {
   }, [current?.id])
 
   return (
-    <div className="relative flex h-full flex-col overflow-hidden lg:flex-row">
+    <div className="relative flex h-full flex-col overflow-hidden">
       <DuskBackdrop />
       <WaveBackground isPlaying={!!current} />
       <AlbumBackdrop url={current?.albumImage} />
       <div className="vignette pointer-events-none absolute inset-0 z-[5]" />
       <div className="grain pointer-events-none absolute z-[6]" />
 
-      {/* ── 무대 모드: 곡 전환 시 화면 전체를 점령하는 오버레이 ─── */}
+      {/* ── 무대 모드 오버레이 ─── */}
       {stageMode !== "off" && stageSong && (
         <div
           className={`absolute inset-0 z-50 flex items-center justify-center backdrop-blur-md ${
             stageMode === "enter" ? "stage-enter" : "stage-leave"
           }`}
           style={{
-            background: `radial-gradient(ellipse at 50% 45%, rgba(${stageColors[0].join(",")},0.35) 0%, rgba(${stageColors[1].join(",")},0.15) 40%, rgba(27,33,64,0.92) 70%)`,
+            background: `radial-gradient(ellipse at 50% 40%, rgba(${stageColors[0].join(",")},0.35) 0%, rgba(${stageColors[1].join(",")},0.15) 40%, rgba(27,33,64,0.92) 70%)`,
           }}
         >
-          <div className="flex flex-col items-center gap-8 px-12 text-center">
+          <div className="flex flex-col items-center gap-6 px-8 text-center">
             {stageSong.albumImage && (
               <div className="relative">
-                {/* 앨범 아트 뒤 글로우 */}
                 <div
                   className="absolute inset-0 scale-110 rounded-3xl blur-[60px] opacity-60"
                   style={{
@@ -247,7 +238,7 @@ export default function DisplayPage() {
                 <img
                   src={stageSong.albumImage}
                   alt=""
-                  className="relative h-64 w-64 rounded-3xl object-cover shadow-2xl lg:h-80 lg:w-80"
+                  className="relative h-56 w-56 rounded-3xl object-cover shadow-2xl"
                 />
               </div>
             )}
@@ -255,14 +246,14 @@ export default function DisplayPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber">
                 지금 재생
               </p>
-              <p className="mt-3 font-serif text-4xl leading-snug text-ivory lg:text-5xl">
+              <p className="mt-2 font-serif text-3xl leading-snug text-ivory">
                 {stageSong.title}
               </p>
               {stageSong.artist && (
-                <p className="mt-3 text-xl text-lavender lg:text-2xl">{stageSong.artist}</p>
+                <p className="mt-2 text-lg text-lavender">{stageSong.artist}</p>
               )}
               {stageSong.name?.trim() && (
-                <p className="mt-5 text-sm text-lavender/60">
+                <p className="mt-3 text-sm text-lavender/60">
                   {stageSong.name.trim()} 님의 신청곡
                 </p>
               )}
@@ -271,111 +262,89 @@ export default function DisplayPage() {
         </div>
       )}
 
-      {/* ── 왼쪽: 지금 재생 중 ─────────────────────────── */}
-      <aside className="relative z-10 flex shrink-0 flex-col justify-between gap-8 border-b border-white/8 bg-ink/25 px-10 py-8 backdrop-blur-[2px] lg:w-[38%] lg:border-b-0 lg:border-r lg:px-12 lg:py-12">
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber">
-            {HOST}
-          </p>
-          <div className="flex items-center gap-3">
-            {!isOnline && (
-              <span className="flex items-center gap-1.5 rounded-full border border-red-400/30 bg-red-400/10 px-3 py-1 text-xs text-red-300">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-400" />
-                연결 복구 중
-              </span>
-            )}
-            <Clock />
-          </div>
-        </div>
-
-        <div className="flex flex-col">
-          {current?.albumImage ? (
-            <img
-              src={current.albumImage}
-              alt=""
-              className="aspect-square w-full max-w-[360px] rounded-2xl object-cover shadow-2xl shadow-black/50"
-            />
-          ) : (
-            <div className="flex aspect-square w-full max-w-[360px] items-center justify-center rounded-2xl border border-white/8 bg-panel/40">
-              <span className="now-playing-dot inline-block h-4 w-4 rounded-full bg-amber/70" />
-            </div>
-          )}
-
-          <div className="mt-7 max-w-[360px]">
-            <div className="flex items-center gap-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber">
-                지금 재생 중
-              </p>
-              {current && <Equalizer />}
-            </div>
-            {current ? (
-              <>
-                <p className="mt-3 font-serif text-3xl leading-snug text-ivory">
-                  {current.title}
-                </p>
-                {current.artist && (
-                  <p className="mt-2 text-lg text-lavender">{current.artist}</p>
-                )}
-                {current.name?.trim() && (
-                  <p className="mt-4 text-sm text-lavender/60">
-                    {current.name.trim()} 님의 신청곡
-                  </p>
-                )}
-              </>
-            ) : (
-              <p className="mt-3 font-serif text-2xl text-lavender">
-                다음 곡을 기다리는 중이에요.
-              </p>
-            )}
-          </div>
-        </div>
-
+      {/* ── 상단: 타이틀 + 날짜 ─── */}
+      <header className="relative z-10 flex items-center justify-between px-8 pb-4 pt-10">
         <div>
+          <h1 className="font-serif text-4xl text-ivory">{HOST}</h1>
+          <p className="mt-1 text-lg text-lavender/70">{EVENT_DATE}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {!isOnline && (
+            <span className="flex items-center gap-1.5 rounded-full border border-red-400/30 bg-red-400/10 px-3 py-1 text-xs text-red-300">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-400" />
+              연결 복구 중
+            </span>
+          )}
+          <Clock />
+        </div>
+      </header>
+
+      {/* ── 지금 재생 중 ─── */}
+      <section className="relative z-10 flex items-center gap-5 border-y border-white/8 bg-ink/25 px-8 py-5 backdrop-blur-[2px]">
+        {current?.albumImage ? (
+          <img src={current.albumImage} alt="" className="h-20 w-20 shrink-0 rounded-xl object-cover shadow-lg shadow-black/30" />
+        ) : (
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-white/8 bg-panel/40">
+            <span className="now-playing-dot inline-block h-3 w-3 rounded-full bg-amber/70" />
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-amber">
+              지금 재생 중
+            </p>
+            {current && <Equalizer />}
+          </div>
+          {current ? (
+            <>
+              <p className="mt-1 truncate font-serif text-2xl text-ivory">{current.title}</p>
+              {current.artist && <p className="mt-0.5 truncate text-base text-lavender">{current.artist}</p>}
+            </>
+          ) : (
+            <p className="mt-1 font-serif text-xl text-lavender">다음 곡을 기다리는 중이에요.</p>
+          )}
+        </div>
+        <div className="shrink-0">
           {status === "loggedout" && (
             <button
               onClick={login}
-              className="rounded-full bg-[#1DB954] px-5 py-2.5 text-sm font-medium text-black transition-transform active:scale-[0.98]"
+              className="rounded-full bg-[#1DB954] px-4 py-2 text-xs font-medium text-black transition-transform active:scale-[0.98]"
             >
               Spotify 연결
             </button>
           )}
-          {status === "unconfigured" && (
-            <span className="text-sm text-lavender/60">Spotify 키 설정 필요</span>
-          )}
           {status === "error" && (
-            <button onClick={login} className="text-sm text-lavender/70 underline">
+            <button onClick={login} className="text-xs text-lavender/70 underline">
               다시 연결
             </button>
           )}
         </div>
-      </aside>
+      </section>
 
-      {/* ── 오른쪽: 문장 피드 ─────────────────────────── */}
-      <div ref={feedRef} className="feed-mask relative z-10 flex-1 overflow-y-auto px-8 py-10 lg:px-12">
-        <div className="mx-auto flex max-w-3xl flex-col gap-7">
-          {/* 인트로 — 피드가 비어 있는 동안에만 머뭅니다 */}
+      {/* ── 문장 피드 ─── */}
+      <div ref={feedRef} className="feed-mask relative z-10 flex-1 overflow-y-auto px-8 py-8">
+        <div className="flex flex-col gap-6">
+          {/* 인트로 */}
           {intro !== "gone" && (
-            <div
-              className={`flex flex-col gap-7 overflow-hidden ${intro === "out" ? "intro-leave" : ""}`}
-            >
-              <div className="flex flex-col items-center py-16 text-center">
+            <div className={`flex flex-col gap-6 overflow-hidden ${intro === "out" ? "intro-leave" : ""}`}>
+              <div className="flex flex-col items-center py-12 text-center">
                 <span className="now-playing-dot inline-block h-3 w-3 rounded-full bg-amber/70" />
-                <p className="mt-8 font-serif text-4xl leading-snug text-ivory">
+                <p className="mt-6 font-serif text-3xl leading-snug text-ivory">
                   오늘 밤의 라운지가
                   <br />
                   열렸습니다
                 </p>
-                <p className="mt-4 text-xl text-lavender/70">
+                <p className="mt-3 text-lg text-lavender/70">
                   곧 이 자리에 여러분의 노래와 문장이 걸려요.
                 </p>
               </div>
 
               {HOST_MESSAGES.map((text, i) => (
                 <div key={`host-${i}`} className="flex flex-col items-end">
-                  <span className="mb-2 pr-1 text-xs text-lavender/50">
+                  <span className="mb-1.5 pr-1 text-[11px] text-lavender/50">
                     {HOST} · {fmtTime(introAt)}
                   </span>
-                  <p className="max-w-[85%] rounded-2xl rounded-tr-sm border border-amber/25 bg-amber/12 px-6 py-4 text-xl leading-relaxed text-ivory">
+                  <p className="max-w-[88%] rounded-2xl rounded-tr-sm border border-amber/25 bg-amber/12 px-5 py-3.5 text-lg leading-relaxed text-ivory">
                     {text}
                   </p>
                 </div>
@@ -384,7 +353,7 @@ export default function DisplayPage() {
           )}
 
           {hasContent && (
-            <p className="text-center text-sm uppercase tracking-[0.32em] text-lavender/50">
+            <p className="text-center text-xs uppercase tracking-[0.3em] text-lavender/50">
               오늘 밤의 라운지
             </p>
           )}
@@ -397,18 +366,18 @@ export default function DisplayPage() {
             if (item.kind === "song") {
               return (
                 <div key={item.id} className={`flex flex-col items-start ${rise}`}>
-                  <span className="mb-2 pl-1 text-xs text-lavender/50">
+                  <span className="mb-1.5 pl-1 text-[11px] text-lavender/50">
                     {item.song.name?.trim() || "익명"} · 신청곡 · {fmtTime(item.at)}
                   </span>
                   <div
-                    className={`flex max-w-[85%] items-center gap-4 rounded-2xl rounded-tl-sm border border-white/8 bg-panel/75 px-5 py-4 backdrop-blur-sm ${glow}`}
+                    className={`flex max-w-[90%] items-center gap-3 rounded-2xl rounded-tl-sm border border-white/8 bg-panel/75 px-4 py-3.5 backdrop-blur-sm ${glow}`}
                   >
                     {item.song.albumImage ? (
-                      <img src={item.song.albumImage} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
+                      <img src={item.song.albumImage} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" />
                     ) : (
-                      <span className="text-2xl text-amber">♪</span>
+                      <span className="text-xl text-amber">♪</span>
                     )}
-                    <p className="text-xl leading-snug text-ivory">
+                    <p className="text-lg leading-snug text-ivory">
                       <span className="text-amber">♪ </span>
                       <span className="font-medium">{item.song.title}</span>
                       {item.song.artist && <span className="text-lavender"> — {item.song.artist}</span>}
@@ -420,11 +389,11 @@ export default function DisplayPage() {
 
             return (
               <div key={item.id} className={`flex flex-col items-start ${rise}`}>
-                <span className="mb-2 pl-1 text-xs text-lavender/50">
+                <span className="mb-1.5 pl-1 text-[11px] text-lavender/50">
                   {item.sentence.name?.trim() || "익명"} · {fmtTime(item.at)}
                 </span>
                 <p
-                  className={`max-w-[90%] rounded-2xl rounded-tl-sm border border-white/8 bg-panel/75 px-6 py-5 font-serif text-2xl leading-[1.7] text-ivory backdrop-blur-sm ${glow}`}
+                  className={`max-w-[92%] rounded-2xl rounded-tl-sm border border-white/8 bg-panel/75 px-5 py-4 font-serif text-xl leading-[1.7] text-ivory backdrop-blur-sm ${glow}`}
                 >
                   {item.sentence.text}
                 </p>
