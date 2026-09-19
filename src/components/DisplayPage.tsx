@@ -5,23 +5,7 @@ import { extractColors, type RGB } from "../lib/extractColor"
 import WaveBackground from "./WaveBackground"
 
 const HOST = "한강 리딩 파티"
-
-function todayLabel(): string {
-  // 배포 환경(UTC)에서도 한국 날짜가 맞도록 Asia/Seoul 기준으로 계산한다.
-  const parts = new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-    weekday: "long",
-    timeZone: "Asia/Seoul",
-  }).formatToParts(new Date())
-  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? ""
-  const year = get("year")
-  const month = get("month")
-  const day = get("day")
-  const weekday = get("weekday")
-  return `${year}. ${month}. ${day}. ${weekday}`
-}
+const EVENT_DATE = "2026. 8. 23. 토요일"
 
 const HOST_MESSAGES = [
   "오늘 밤, 도서관이 조용한 라운지로 바뀌어요. 편히 머물러주세요.",
@@ -48,15 +32,6 @@ function Clock() {
       {now.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
     </span>
   )
-}
-
-function EventDate() {
-  const [label, setLabel] = useState(todayLabel())
-  useEffect(() => {
-    const id = setInterval(() => setLabel(todayLabel()), 60_000)
-    return () => clearInterval(id)
-  }, [])
-  return <p className="mt-1 text-lg text-lavender/70">{label}</p>
 }
 
 function DuskBackdrop() {
@@ -291,7 +266,7 @@ export default function DisplayPage() {
       <header className="relative z-10 flex items-center justify-between px-8 pb-4 pt-10">
         <div>
           <h1 className="font-serif text-4xl text-ivory">{HOST}</h1>
-          <EventDate />
+          <p className="mt-1 text-lg text-lavender/70">{EVENT_DATE}</p>
         </div>
         <div className="flex items-center gap-3">
           {!isOnline && (
