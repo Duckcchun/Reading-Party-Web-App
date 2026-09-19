@@ -25,7 +25,7 @@ export default function ParticipantPage() {
   const [error, setError] = useState("")
   const [sending, setSending] = useState(false)
 
-  const MAX_SUBMISSIONS = 2
+  const MAX_SUBMISSIONS = 5
   const STORAGE_KEY = "hrp-submit-count"
 
   function getSubmitCount(): number {

@@ -290,12 +290,8 @@ export default function DisplayPage() {
 
       {/* ── 왼쪽: 타이틀 + 앨범 + 지금 재생 중 + QR ─── */}
       <aside className="relative z-10 flex shrink-0 flex-col justify-between gap-8 border-b border-white/8 bg-ink/25 px-10 py-8 backdrop-blur-[2px] lg:w-[38%] lg:border-b-0 lg:border-r lg:px-12 lg:py-12">
-        {/* 상단: 타이틀 + 날짜 + 시계 */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="font-serif text-4xl text-ivory">{HOST}</h1>
-            <EventDate />
-          </div>
+        {/* 상단: 시계 → 타이틀 + 날짜 (세로 배치) */}
+        <div className="flex flex-col gap-4">
           <div className="flex items-center gap-3">
             {!isOnline && (
               <span className="flex items-center gap-1.5 rounded-full border border-red-400/30 bg-red-400/10 px-3 py-1 text-xs text-red-300">
@@ -304,6 +300,10 @@ export default function DisplayPage() {
               </span>
             )}
             <Clock />
+          </div>
+          <div>
+            <h1 className="font-serif text-4xl text-ivory">{HOST}</h1>
+            <EventDate />
           </div>
         </div>
 
@@ -350,25 +350,15 @@ export default function DisplayPage() {
           </div>
 
           {/* 앨범 아래 QR — 참가자 화면으로 이동 */}
-          <div className="mt-8 flex items-center gap-4">
-            <div className="rounded-xl bg-white p-4">
+          <div className="mt-20">
+            <div className="inline-block rounded-xl bg-white p-4">
               <QRCodeSVG
                 value={`${window.location.origin}/#/participant`}
-                size={160}
+                size={240}
                 level="M"
                 bgColor="#ffffff"
                 fgColor="#1b2140"
               />
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber">
-                QR로 참여하기
-              </p>
-              <p className="mt-2 text-sm leading-relaxed text-lavender/70">
-                휴대폰으로 스캔하면
-                <br />
-                노래와 문장을 남길 수 있어요.
-              </p>
             </div>
           </div>
         </div>
