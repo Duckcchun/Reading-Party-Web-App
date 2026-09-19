@@ -3,6 +3,7 @@ import { markPlayed, nowPlaying, useOnline, useStore, type Song, type Sentence }
 import { useSpotifyPlayer } from "../lib/spotify"
 import { extractColors, type RGB } from "../lib/extractColor"
 import WaveBackground from "./WaveBackground"
+import { QRCodeSVG } from "qrcode.react"
 
 const HOST = "한강 리딩 파티"
 
@@ -234,7 +235,7 @@ export default function DisplayPage() {
   }, [current?.id])
 
   return (
-    <div className="relative flex h-full flex-col overflow-hidden">
+    <div className="relative flex h-full flex-col overflow-hidden lg:flex-row">
       <DuskBackdrop />
       <WaveBackground isPlaying={!!current} />
       <AlbumBackdrop url={current?.albumImage} />
@@ -287,71 +288,115 @@ export default function DisplayPage() {
         </div>
       )}
 
-      {/* ── 상단: 타이틀 + 날짜 ─── */}
-      <header className="relative z-10 flex items-center justify-between px-8 pb-4 pt-10">
-        <div>
-          <h1 className="font-serif text-4xl text-ivory">{HOST}</h1>
-          <EventDate />
+      {/* ── 왼쪽: 타이틀 + 앨범 + 지금 재생 중 + QR ─── */}
+      <aside className="relative z-10 flex shrink-0 flex-col justify-between gap-8 border-b border-white/8 bg-ink/25 px-10 py-8 backdrop-blur-[2px] lg:w-[38%] lg:border-b-0 lg:border-r lg:px-12 lg:py-12">
+        {/* 상단: 타이틀 + 날짜 + 시계 */}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="font-serif text-4xl text-ivory">{HOST}</h1>
+            <EventDate />
+          </div>
+          <div className="flex items-center gap-3">
+            {!isOnline && (
+              <span className="flex items-center gap-1.5 rounded-full border border-red-400/30 bg-red-400/10 px-3 py-1 text-xs text-red-300">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-400" />
+                연결 복구 중
+              </span>
+            )}
+            <Clock />
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          {!isOnline && (
-            <span className="flex items-center gap-1.5 rounded-full border border-red-400/30 bg-red-400/10 px-3 py-1 text-xs text-red-300">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-400" />
-              연결 복구 중
-            </span>
-          )}
-          <Clock />
-        </div>
-      </header>
 
-      {/* ── 지금 재생 중 ─── */}
-      <section className="relative z-10 flex items-center gap-5 border-y border-white/8 bg-ink/25 px-8 py-5 backdrop-blur-[2px]">
-        {current?.albumImage ? (
-          <img src={current.albumImage} alt="" className="h-20 w-20 shrink-0 rounded-xl object-cover shadow-lg shadow-black/30" />
-        ) : (
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-white/8 bg-panel/40">
-            <span className="now-playing-dot inline-block h-3 w-3 rounded-full bg-amber/70" />
-          </div>
-        )}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-amber">
-              지금 재생 중
-            </p>
-            {current && <Equalizer />}
-          </div>
-          {current ? (
-            <>
-              <p className="mt-1 truncate font-serif text-2xl text-ivory">{current.title}</p>
-              {current.artist && <p className="mt-0.5 truncate text-base text-lavender">{current.artist}</p>}
-            </>
+        {/* 중앙: 앨범 + 지금 재생 중 + QR */}
+        <div className="flex flex-col">
+          {current?.albumImage ? (
+            <img
+              src={current.albumImage}
+              alt=""
+              className="aspect-square w-full max-w-[360px] rounded-2xl object-cover shadow-2xl shadow-black/50"
+            />
           ) : (
-            <p className="mt-1 font-serif text-xl text-lavender">다음 곡을 기다리는 중이에요.</p>
+            <div className="flex aspect-square w-full max-w-[360px] items-center justify-center rounded-2xl border border-white/8 bg-panel/40">
+              <span className="now-playing-dot inline-block h-4 w-4 rounded-full bg-amber/70" />
+            </div>
           )}
+
+          <div className="mt-7 max-w-[360px]">
+            <div className="flex items-center gap-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber">
+                지금 재생 중
+              </p>
+              {current && <Equalizer />}
+            </div>
+            {current ? (
+              <>
+                <p className="mt-3 font-serif text-3xl leading-snug text-ivory">
+                  {current.title}
+                </p>
+                {current.artist && (
+                  <p className="mt-2 text-lg text-lavender">{current.artist}</p>
+                )}
+                {current.name?.trim() && (
+                  <p className="mt-4 text-sm text-lavender/60">
+                    {current.name.trim()} 님의 신청곡
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="mt-3 font-serif text-2xl text-lavender">
+                다음 곡을 기다리는 중이에요.
+              </p>
+            )}
+          </div>
+
+          {/* 앨범 아래 QR — 참가자 화면으로 이동 */}
+          <div className="mt-8 flex items-center gap-4">
+            <div className="rounded-xl bg-white p-4">
+              <QRCodeSVG
+                value={`${window.location.origin}/#/participant`}
+                size={160}
+                level="M"
+                bgColor="#ffffff"
+                fgColor="#1b2140"
+              />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber">
+                QR로 참여하기
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-lavender/70">
+                휴대폰으로 스캔하면
+                <br />
+                노래와 문장을 남길 수 있어요.
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="shrink-0">
+
+        {/* 하단: Spotify 연결 */}
+        <div>
           {status === "loggedout" && (
             <button
               onClick={login}
-              className="rounded-full bg-[#1DB954] px-4 py-2 text-xs font-medium text-black transition-transform active:scale-[0.98]"
+              className="rounded-full bg-[#1DB954] px-5 py-2.5 text-sm font-medium text-black transition-transform active:scale-[0.98]"
             >
               Spotify 연결
             </button>
           )}
           {status === "error" && (
-            <button onClick={login} className="text-xs text-lavender/70 underline">
+            <button onClick={login} className="text-sm text-lavender/70 underline">
               다시 연결
             </button>
           )}
         </div>
-      </section>
+      </aside>
 
-      {/* ── 문장 피드 ─── */}
-      <div ref={feedRef} className="feed-mask relative z-10 flex-1 overflow-y-auto px-8 py-8">
-        <div className="flex flex-col gap-6">
+      {/* ── 오른쪽: 문장 피드 ─── */}
+      <div ref={feedRef} className="feed-mask relative z-10 flex-1 overflow-y-auto px-8 py-10 lg:px-12">
+        <div className="mx-auto flex max-w-3xl flex-col gap-7">
           {/* 인트로 */}
           {intro !== "gone" && (
-            <div className={`flex flex-col gap-6 overflow-hidden ${intro === "out" ? "intro-leave" : ""}`}>
+            <div className={`flex flex-col gap-7 overflow-hidden ${intro === "out" ? "intro-leave" : ""}`}>
               <div className="flex flex-col items-center py-12 text-center">
                 <span className="now-playing-dot inline-block h-3 w-3 rounded-full bg-amber/70" />
                 <p className="mt-6 font-serif text-3xl leading-snug text-ivory">
