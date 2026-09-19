@@ -350,25 +350,15 @@ export default function DisplayPage() {
           </div>
 
           {/* 앨범 아래 QR — 참가자 화면으로 이동 */}
-          <div className="mt-8 flex items-center gap-4">
-            <div className="rounded-xl bg-white p-4">
+          <div className="mt-20">
+            <div className="inline-block rounded-xl bg-white p-4">
               <QRCodeSVG
                 value={`${window.location.origin}/#/participant`}
-                size={160}
+                size={240}
                 level="M"
                 bgColor="#ffffff"
                 fgColor="#1b2140"
               />
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber">
-                QR로 참여하기
-              </p>
-              <p className="mt-2 text-sm leading-relaxed text-lavender/70">
-                휴대폰으로 스캔하면
-                <br />
-                노래와 문장을 남길 수 있어요.
-              </p>
             </div>
           </div>
         </div>
