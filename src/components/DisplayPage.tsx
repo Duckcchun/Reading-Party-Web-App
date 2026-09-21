@@ -289,7 +289,7 @@ export default function DisplayPage() {
       )}
 
       {/* ── 왼쪽: 타이틀 + 앨범 + 지금 재생 중 + QR ─── */}
-      <aside className="relative z-10 flex shrink-0 flex-col justify-between gap-8 border-b border-white/8 bg-ink/25 px-10 py-8 backdrop-blur-[2px] lg:w-[38%] lg:border-b-0 lg:border-r lg:px-12 lg:py-12">
+      <aside className="relative z-10 flex shrink-0 flex-col justify-between gap-5 border-b border-white/8 bg-ink/25 px-10 py-8 backdrop-blur-[2px] lg:w-[36%] lg:border-b-0 lg:border-r lg:px-12 lg:py-10 2xl:gap-8 2xl:py-12">
         {/* 상단: 시계 → 타이틀 + 날짜 (세로 배치) */}
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-3">
@@ -302,7 +302,7 @@ export default function DisplayPage() {
             <Clock />
           </div>
           <div>
-            <h1 className="font-serif text-4xl text-ivory">{HOST}</h1>
+            <h1 className="font-serif text-3xl text-ivory 2xl:text-4xl">{HOST}</h1>
             <EventDate />
           </div>
         </div>
@@ -313,15 +313,15 @@ export default function DisplayPage() {
             <img
               src={current.albumImage}
               alt=""
-              className="aspect-square w-full max-w-[360px] rounded-2xl object-cover shadow-2xl shadow-black/50"
+              className="aspect-square w-full max-w-[240px] rounded-2xl object-cover shadow-2xl shadow-black/50 2xl:max-w-[300px]"
             />
           ) : (
-            <div className="flex aspect-square w-full max-w-[360px] items-center justify-center rounded-2xl border border-white/8 bg-panel/40">
+            <div className="flex aspect-square w-full max-w-[240px] items-center justify-center rounded-2xl border border-white/8 bg-panel/40 2xl:max-w-[300px]">
               <span className="now-playing-dot inline-block h-4 w-4 rounded-full bg-amber/70" />
             </div>
           )}
 
-          <div className="mt-7 max-w-[360px]">
+          <div className="mt-5 max-w-[300px] 2xl:mt-7">
             <div className="flex items-center gap-3">
               <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber">
                 지금 재생 중
@@ -330,34 +330,35 @@ export default function DisplayPage() {
             </div>
             {current ? (
               <>
-                <p className="mt-3 font-serif text-3xl leading-snug text-ivory">
+                <p className="mt-3 font-serif text-2xl leading-snug text-ivory 2xl:text-3xl">
                   {current.title}
                 </p>
                 {current.artist && (
-                  <p className="mt-2 text-lg text-lavender">{current.artist}</p>
+                  <p className="mt-2 text-base text-lavender 2xl:text-lg">{current.artist}</p>
                 )}
                 {current.name?.trim() && (
-                  <p className="mt-4 text-sm text-lavender/60">
+                  <p className="mt-3 text-sm text-lavender/60 2xl:mt-4">
                     {current.name.trim()} 님의 신청곡
                   </p>
                 )}
               </>
             ) : (
-              <p className="mt-3 font-serif text-2xl text-lavender">
+              <p className="mt-3 font-serif text-xl text-lavender 2xl:text-2xl">
                 다음 곡을 기다리는 중이에요.
               </p>
             )}
           </div>
 
           {/* 앨범 아래 QR — 참가자 화면으로 이동 */}
-          <div className="mt-20">
-            <div className="inline-block rounded-xl bg-white p-4">
+          <div className="mt-8 2xl:mt-12">
+            <div className="inline-block rounded-xl bg-white p-3 2xl:p-4">
               <QRCodeSVG
                 value={`${window.location.origin}/#/participant`}
-                size={240}
+                size={140}
                 level="M"
                 bgColor="#ffffff"
                 fgColor="#1b2140"
+                className="h-[140px] w-[140px] 2xl:h-[180px] 2xl:w-[180px]"
               />
             </div>
           </div>
